@@ -21,12 +21,18 @@ struct game_header
     SDL_Texture *text_image;
 
 };
+typedef struct{
+    float x;
+    float y;
+} player;
 
 typedef struct game_header Game;
 
 void game_free(Game* game, int exit_status); // Returns the exits status when quiting 
 bool load_media(Game* game);
 bool sdl_initialize(Game* game); // Initalizes Game Pointer
+void drawPlayer(player *player, SDL_Renderer * renderer); 
+
 
 
 
@@ -40,6 +46,23 @@ int main(int argc, char *argv[])
     game.text_color = (SDL_Color){255,255,255,255};
     game.text_rect = (SDL_Rect){0,0,0,0};
     game.text_image = NULL;
+    int map[8][8] = {
+    {1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 1, 1, 0, 0, 1},
+    {1, 0, 0, 1, 1, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1},
+    };
+
+    player p1;
+    p1.x = 15;
+    p1.y = 20;
+
+
+
 
     if(sdl_initialize(&game)) // If there is an error we want to return an exit failure 
     {
@@ -76,8 +99,36 @@ int main(int argc, char *argv[])
             }
         }
         SDL_RenderClear(game.renderer);
-        SDL_RenderCopy(game.renderer, game.background,NULL,NULL);// The nulls are destination rect which means the size of the image provided and the size of the window 
-        SDL_RenderCopy(game.renderer,game.text_image,NULL,&game.text_rect);
+        //SDL_RenderCopy(game.renderer, game.background,NULL,NULL);// The nulls are destination rect which means the size of the image provided and the size of the window 
+        //SDL_RenderCopy(game.renderer,game.text_image,NULL,&game.text_rect);
+
+    for(int i = 0; i < 8;i++)
+    {
+        for(int j = 0; j < 8;j++)
+        {
+            SDL_Rect temp;
+            temp.x = j*100;
+            temp.y = i*75;
+            temp.w = 100;
+            temp.h = 75;
+            SDL_RenderDrawRect(game.renderer,&temp);
+            if(map[i][j] ==1)
+            {
+                SDL_SetRenderDrawColor(game.renderer,0,0,0,0);
+                SDL_RenderFillRect(game.renderer,&temp);
+                
+            }
+            else 
+            {
+                SDL_SetRenderDrawColor(game.renderer,255,200,255,255);
+                SDL_RenderFillRect(game.renderer,&temp);
+            }
+            SDL_SetRenderDrawColor(game.renderer, 255, 255, 255, 255);
+            SDL_RenderDrawRect(game.renderer, &temp);
+        }
+
+    }
+        drawPlayer(&p1,game.renderer);
         SDL_RenderPresent(game.renderer);
         SDL_Delay(16);
     }   
@@ -171,6 +222,17 @@ bool load_media(Game* game)
 
     return false;
 }   
+void drawPlayer(player *player, SDL_Renderer * renderer)
+{
+    SDL_Rect temp;
+    temp.x = player->x;
+    temp.y = player->y;
+    temp.w =  100;
+    temp.y = 100;
+    SDL_RenderDrawRect(renderer, &temp);
+    SDL_SetRenderDrawColor(renderer, 144,238,144,0);
+    SDL_RenderFillRect(renderer,&temp);
+}
   
 
 
