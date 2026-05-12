@@ -5,6 +5,7 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_scancode.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_keyboard.h>
 #define WINDOW_TITLE "02 Close Window"
 #define SCREEN_WIDTH 800 
 #define SCREEN_HEIGHT 600 
@@ -58,8 +59,8 @@ int main(int argc, char *argv[])
     };
 
     player p1;
-    p1.x = 15;
-    p1.y = 20;
+    p1.x = 200;
+    p1.y = 150;
 
 
 
@@ -80,6 +81,7 @@ int main(int argc, char *argv[])
         SDL_Event event;
         while(SDL_PollEvent(&event))
         {
+            
             switch(event.type)
             {
                 case SDL_QUIT:
@@ -98,9 +100,41 @@ int main(int argc, char *argv[])
                     break;
             }
         }
-        SDL_RenderClear(game.renderer);
-        //SDL_RenderCopy(game.renderer, game.background,NULL,NULL);// The nulls are destination rect which means the size of the image provided and the size of the window 
-        //SDL_RenderCopy(game.renderer,game.text_image,NULL,&game.text_rect);
+    int oldPlayerX = p1.x;
+    int oldPlayerY = p1.y;
+    SDL_RenderClear(game.renderer);
+    const Uint8 *keys = SDL_GetKeyboardState(NULL);
+    if(keys[SDL_SCANCODE_W] == 1 ) 
+    {
+        p1.y-=3;
+    }
+    if(keys[SDL_SCANCODE_A] == 1)
+    {
+        p1.x-=3;
+    }
+    if(keys[SDL_SCANCODE_S] == 1)
+    {
+        p1.y+=3;
+    }
+    if(keys[SDL_SCANCODE_D] == 1)
+    {
+        p1.x+=3;
+    }
+
+    int newPlayerRow = (p1.y+10)/75;
+    int newPlayerCol = (p1.x+10)/100;
+
+    if(newPlayerRow >=0 && newPlayerRow < 8 && newPlayerCol >=0 && newPlayerCol < 8)
+    {
+        if(map[newPlayerRow][newPlayerCol] ==1 )
+        {
+            
+            p1.x= oldPlayerX;
+            p1.y= oldPlayerY;
+        }
+    }
+
+
 
     for(int i = 0; i < 8;i++)
     {
@@ -227,8 +261,8 @@ void drawPlayer(player *player, SDL_Renderer * renderer)
     SDL_Rect temp;
     temp.x = player->x;
     temp.y = player->y;
-    temp.w =  100;
-    temp.y = 100;
+    temp.w =  10;
+    temp.h = 10;
     SDL_RenderDrawRect(renderer, &temp);
     SDL_SetRenderDrawColor(renderer, 144,238,144,0);
     SDL_RenderFillRect(renderer,&temp);
