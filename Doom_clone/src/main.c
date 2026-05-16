@@ -6,6 +6,8 @@
 #include <SDL2/SDL_scancode.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_keyboard.h>
+#include <math.h>
+#define _USE_MATH_DEFINES
 #define WINDOW_TITLE "02 Close Window"
 #define SCREEN_WIDTH 800 
 #define SCREEN_HEIGHT 600 
@@ -25,6 +27,7 @@ struct game_header
 typedef struct{
     float x;
     float y;
+    float angle;
 } player;
 
 typedef struct game_header Game;
@@ -61,6 +64,7 @@ int main(int argc, char *argv[])
     player p1;
     p1.x = 200;
     p1.y = 150;
+    p1.angle = 0;
 
 
 
@@ -104,21 +108,45 @@ int main(int argc, char *argv[])
     int oldPlayerY = p1.y;
     SDL_RenderClear(game.renderer);
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    if(keys[SDL_SCANCODE_W] == 1 ) 
+    if(keys[SDL_SCANCODE_Q])
     {
-        p1.y-=3;
+        p1.angle+=0.05;
     }
-    if(keys[SDL_SCANCODE_A] == 1)
+    if(keys[SDL_SCANCODE_E])
     {
-        p1.x-=3;
+        p1.angle-=0.05;
     }
-    if(keys[SDL_SCANCODE_S] == 1)
+    if (keys[SDL_SCANCODE_W])
     {
-        p1.y+=3;
+        p1.y -= 3;
+        int newPlayerRow = p1.y / 75;  // check top edge
+        int newPlayerCol = p1.x / 100;
+        if (map[newPlayerRow][newPlayerCol] == 1)
+            p1.y = oldPlayerY;  // restore if wall
     }
-    if(keys[SDL_SCANCODE_D] == 1)
+    if (keys[SDL_SCANCODE_S])
     {
-        p1.x+=3;
+        p1.y += 3;
+        int newPlayerRow = (p1.y + 10) / 75;  // check bottom edge
+        int newPlayerCol = p1.x / 100;
+        if (map[newPlayerRow][newPlayerCol] == 1)
+            p1.y = oldPlayerY;
+    }
+    if (keys[SDL_SCANCODE_A])
+    {
+        p1.x -= 3;
+        int newPlayerRow = p1.y / 75;
+        int newPlayerCol = p1.x / 100;  // check left edge
+        if (map[newPlayerRow][newPlayerCol] == 1)
+            p1.x = oldPlayerX;
+    }
+    if (keys[SDL_SCANCODE_D])
+    {
+        p1.x += 3;
+        int newPlayerRow = p1.y / 75;
+        int newPlayerCol = (p1.x + 10) / 100;  // check right edge
+        if (map[newPlayerRow][newPlayerCol] == 1)
+            p1.x = oldPlayerX;
     }
 
     int newPlayerRow = (p1.y+10)/75;
@@ -266,6 +294,16 @@ void drawPlayer(player *player, SDL_Renderer * renderer)
     SDL_RenderDrawRect(renderer, &temp);
     SDL_SetRenderDrawColor(renderer, 144,238,144,0);
     SDL_RenderFillRect(renderer,&temp);
+
+    // Draw line 
+    int lineLength = 50;
+    int startX = temp.x+temp.w/2;
+    int startY = temp.h/2 + temp.y;
+    int endX = startX + cos(player->angle) * lineLength;
+    int endY = startY + sin(player->angle) * lineLength;
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    SDL_RenderDrawLine(renderer,startX,startY,endX,endY);
+
 }
   
 
