@@ -28,6 +28,10 @@ typedef struct{
     float x;
     float y;
     float angle;
+    float dirX;
+    float dirY;
+    float planeX;
+    float planeY;
 } player;
 
 typedef struct game_header Game;
@@ -52,19 +56,20 @@ int main(int argc, char *argv[])
     game.text_image = NULL;
     int map[8][8] = {
     {1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 0, 1, 0, 0, 0, 0, 1},
+    {1, 0, 1, 0, 0, 0, 0, 1},
+    {1, 0, 1, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 1, 1, 0, 0, 1},
-    {1, 0, 0, 1, 1, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 1, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 1},
     {1, 1, 1, 1, 1, 1, 1, 1},
     };
 
     player p1;
-    p1.x = 200;
+    p1.x = 150;
     p1.y = 150;
     p1.angle = 0;
+    p1.dirX = cos(p1.angle); //
 
 
 
@@ -116,9 +121,10 @@ int main(int argc, char *argv[])
     {
         p1.angle-=0.05;
     }
-    if (keys[SDL_SCANCODE_W])
+    if (keys[SDL_SCANCODE_W]) // Changed movement so that its dependent on players camera angle basically
     {
-        p1.y -= 3;
+        p1.y += 3*sin(p1.angle);
+        p1.x+= 3*cos(p1.angle);
         int newPlayerRow = p1.y / 75;  // check top edge
         int newPlayerCol = p1.x / 100;
         if (map[newPlayerRow][newPlayerCol] == 1)
@@ -126,7 +132,9 @@ int main(int argc, char *argv[])
     }
     if (keys[SDL_SCANCODE_S])
     {
-        p1.y += 3;
+        p1.y -= 3*sin(p1.angle);
+        p1.x-= 3*cos(p1.angle);
+
         int newPlayerRow = (p1.y + 10) / 75;  // check bottom edge
         int newPlayerCol = p1.x / 100;
         if (map[newPlayerRow][newPlayerCol] == 1)
@@ -134,7 +142,8 @@ int main(int argc, char *argv[])
     }
     if (keys[SDL_SCANCODE_A])
     {
-        p1.x -= 3;
+        p1.x += 3*sin(p1.angle);
+        p1.y -=3*cos(p1.angle);
         int newPlayerRow = p1.y / 75;
         int newPlayerCol = p1.x / 100;  // check left edge
         if (map[newPlayerRow][newPlayerCol] == 1)
@@ -142,7 +151,8 @@ int main(int argc, char *argv[])
     }
     if (keys[SDL_SCANCODE_D])
     {
-        p1.x += 3;
+        p1.x -= 3*sin(p1.angle);
+        p1.y += 3*cos(p1.angle);
         int newPlayerRow = p1.y / 75;
         int newPlayerCol = (p1.x + 10) / 100;  // check right edge
         if (map[newPlayerRow][newPlayerCol] == 1)
@@ -303,8 +313,9 @@ void drawPlayer(player *player, SDL_Renderer * renderer)
     int endY = startY + sin(player->angle) * lineLength;
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
     SDL_RenderDrawLine(renderer,startX,startY,endX,endY);
-
 }
+
+
   
 
 
