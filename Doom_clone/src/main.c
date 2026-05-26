@@ -125,10 +125,13 @@ int main(int argc, char *argv[])
     {
         p1.y += 3*sin(p1.angle);
         p1.x+= 3*cos(p1.angle);
-        int newPlayerRow = p1.y / 75;  // check top edge
+        int newPlayerRow = (p1.y - 10) / 75;  // check top edge
         int newPlayerCol = p1.x / 100;
         if (map[newPlayerRow][newPlayerCol] == 1)
+        {
             p1.y = oldPlayerY;  // restore if wall
+            p1.x = oldPlayerX;
+        }
     }
     if (keys[SDL_SCANCODE_S])
     {
@@ -137,17 +140,25 @@ int main(int argc, char *argv[])
 
         int newPlayerRow = (p1.y + 10) / 75;  // check bottom edge
         int newPlayerCol = p1.x / 100;
+    
         if (map[newPlayerRow][newPlayerCol] == 1)
+        {
             p1.y = oldPlayerY;
+            p1.x = oldPlayerX;
+        }
     }
     if (keys[SDL_SCANCODE_A])
     {
         p1.x += 3*sin(p1.angle);
         p1.y -=3*cos(p1.angle);
         int newPlayerRow = p1.y / 75;
-        int newPlayerCol = p1.x / 100;  // check left edge
+        int newPlayerCol = (p1.x -10) / 100;  // check left edge
         if (map[newPlayerRow][newPlayerCol] == 1)
+        {
             p1.x = oldPlayerX;
+            p1.y = oldPlayerY;
+        }
+
     }
     if (keys[SDL_SCANCODE_D])
     {
@@ -156,7 +167,10 @@ int main(int argc, char *argv[])
         int newPlayerRow = p1.y / 75;
         int newPlayerCol = (p1.x + 10) / 100;  // check right edge
         if (map[newPlayerRow][newPlayerCol] == 1)
+        {
             p1.x = oldPlayerX;
+            p1.y= oldPlayerY;
+        }
     }
 
     int newPlayerRow = (p1.y+10)/75;
@@ -313,6 +327,59 @@ void drawPlayer(player *player, SDL_Renderer * renderer)
     int endY = startY + sin(player->angle) * lineLength;
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
     SDL_RenderDrawLine(renderer,startX,startY,endX,endY);
+}
+
+void CastRay(player* player, SDL_Renderer* renderer)
+    {
+        float lineX = cos(player->angle);
+        float lineY = sin(player->angle);
+        int playerCol = player->x / 100;
+        int playerRow = player->y / 75;
+        float deltaDirX = fabs(1/lineX);
+        float deltaDirY = fabs(1/lineY);
+        int stepX;
+        int stepY;
+
+        if(lineX > 0)
+        {
+            stepX=1    
+        }
+        else
+        {
+            stepX= -1 
+        }
+        if(lineY > 0)
+        {
+            stepY=1 
+        }
+        else
+        {
+            stepY=-1
+        }
+        float sideDistanceX = deltaDirX*(fabs(player->x-(playerCol+stepX)*100));
+        float sideDistanceY = deltaDirY*(fabs(player->y-(playerRow+stepY)*75));
+        bool hit = false;
+        while !hit:
+        {
+            if(sideDistanceX < sideDistanceY)
+            {
+                playerCol+=stepX;
+                sideDistanceX += deltaDirX;
+                if(map[playerRow][playerCol] ==1) 
+                {
+                    hit = true;
+                }
+            }
+            else
+            {
+                playerRow+=stepY;
+                sideDistanceY += deltaDirY;
+                if(map[playerRow][playerCol] ==1) 
+                {
+                    hit = true;
+                }
+            }
+        }
 }
 
 
