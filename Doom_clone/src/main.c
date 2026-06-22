@@ -39,7 +39,8 @@ typedef struct game_header Game;
 void game_free(Game* game, int exit_status); // Returns the exits status when quiting 
 bool load_media(Game* game);
 bool sdl_initialize(Game* game); // Initalizes Game Pointer
-void drawPlayer(player *player, SDL_Renderer * renderer); 
+float castRay(player* player, int map[8][8]);
+void drawPlayer(player *player, SDL_Renderer * renderer, int map[8][8]); 
 
 
 
@@ -214,7 +215,7 @@ int main(int argc, char *argv[])
         }
 
     }
-        drawPlayer(&p1,game.renderer);
+        drawPlayer(&p1,game.renderer,map);
         SDL_RenderPresent(game.renderer);
         SDL_Delay(16);
     }   
@@ -308,7 +309,101 @@ bool load_media(Game* game)
 
     return false;
 }   
-void drawPlayer(player *player, SDL_Renderer * renderer)
+
+float castRay(player* player,int map[8][8])
+    {
+        float lineX = cos(player->angle);
+        float lineY = sin(player->angle);
+        int playerCol = player->x / 100;
+        int playerRow = player->y / 75;
+        float deltaDirX = fabs(1/lineX);
+        float deltaDirY = fabs(1/lineY);
+        int stepX;
+        int stepY;
+        float sideDistanceX,sideDistanceY;
+        int side;
+
+        if(lineX > 0)
+        {
+            stepX=1;  
+            sideDistanceX = deltaDirX *((playerCol + 1) * 100 - player->x);
+
+        }
+        else
+        {
+            stepX= -1;
+            sideDistanceX = deltaDirX * (player->x - playerCol * 100); 
+        }
+        if(lineY > 0)
+        {
+            stepY=1; 
+            sideDistanceY = deltaDirY *((playerRow + 1 ) * 75 - player->y);
+            
+        }
+        else
+        {
+            stepY=-1;
+            sideDistanceY = deltaDirY * (player->y - playerRow * 75);
+        }
+    
+        bool hit = false;
+        while(!hit)
+        {
+            if(sideDistanceX < sideDistanceY)
+            {
+                playerCol+=stepX;
+                sideDistanceX += deltaDirX;
+                side = 0;
+                if(map[playerRow][playerCol] ==1) 
+                {
+                    hit = true;
+                }
+            }
+            else
+            {
+                playerRow+=stepY;
+                sideDistanceY += deltaDirY;
+                side = 1;
+                if(map[playerRow][playerCol] ==1) 
+                {
+                    hit = true;
+                }
+            }
+        }
+        float wallX,wallY;
+        if(side == 0) 
+        {
+            if(lineX > 0 ) 
+            {
+                wallX = (playerCol)*100;
+            }
+            else
+            {
+                wallX = (playerCol+1)*100;
+            }
+             wallY = player->y + ((wallX - player->x) / lineX) * lineY;
+        }
+        else
+        {
+            if(lineY > 0 )
+            {
+                wallY = playerRow * 75;
+            }
+            else
+            {
+                wallY = (playerRow+1)*75;
+            }
+            wallX = player->x + ((wallY- player->y) / lineY) * lineX;
+            
+        }
+        float playerWallDist = sqrt((wallX - player->x)*(wallX - player->x) + (wallY-player->y)*(wallY-player->y));
+        printf("side=%d lineX=%.2f lineY=%.2f playerCol=%d playerRow=%d wallX=%.2f wallY=%.2f dist=%.2f\n",
+    side, lineX, lineY, playerCol, playerRow, wallX, wallY, playerWallDist);
+        return playerWallDist;
+
+}
+
+void drawPlayer(player *player, SDL_Renderer * renderer, int map[8][8])
 {
     SDL_Rect temp;
     temp.x = player->x;
@@ -320,66 +415,13 @@ void drawPlayer(player *player, SDL_Renderer * renderer)
     SDL_RenderFillRect(renderer,&temp);
 
     // Draw line 
-    int lineLength = 50;
+    float dist = castRay(player,map);
     int startX = temp.x+temp.w/2;
     int startY = temp.h/2 + temp.y;
-    int endX = startX + cos(player->angle) * lineLength;
-    int endY = startY + sin(player->angle) * lineLength;
+    int endX = startX + cos(player->angle) * dist;
+    int endY = startY + sin(player->angle) * dist;
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
     SDL_RenderDrawLine(renderer,startX,startY,endX,endY);
-}
-
-void CastRay(player* player, SDL_Renderer* renderer)
-    {
-        float lineX = cos(player->angle);
-        float lineY = sin(player->angle);
-        int playerCol = player->x / 100;
-        int playerRow = player->y / 75;
-        float deltaDirX = fabs(1/lineX);
-        float deltaDirY = fabs(1/lineY);
-        int stepX;
-        int stepY;
-
-        if(lineX > 0)
-        {
-            stepX=1    
-        }
-        else
-        {
-            stepX= -1 
-        }
-        if(lineY > 0)
-        {
-            stepY=1 
-        }
-        else
-        {
-            stepY=-1
-        }
-        float sideDistanceX = deltaDirX*(fabs(player->x-(playerCol+stepX)*100));
-        float sideDistanceY = deltaDirY*(fabs(player->y-(playerRow+stepY)*75));
-        bool hit = false;
-        while !hit:
-        {
-            if(sideDistanceX < sideDistanceY)
-            {
-                playerCol+=stepX;
-                sideDistanceX += deltaDirX;
-                if(map[playerRow][playerCol] ==1) 
-                {
-                    hit = true;
-                }
-            }
-            else
-            {
-                playerRow+=stepY;
-                sideDistanceY += deltaDirY;
-                if(map[playerRow][playerCol] ==1) 
-                {
-                    hit = true;
-                }
-            }
-        }
 }
 
 
