@@ -41,6 +41,8 @@ bool load_media(Game* game);
 bool sdl_initialize(Game* game); // Initalizes Game Pointer
 float castRay(player* player, int map[8][8]);
 void drawPlayer(player *player, SDL_Renderer * renderer, int map[8][8]); 
+bool isColliding(player* player, int map[8][8]);
+void movePlayer(player* player, int map[8][8]);
 
 
 
@@ -110,72 +112,12 @@ int main(int argc, char *argv[])
                     break;
             }
         }
-    int oldPlayerX = p1.x;
-    int oldPlayerY = p1.y;
-    SDL_RenderClear(game.renderer);
-    const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    if(keys[SDL_SCANCODE_Q])
-    {
-        p1.angle+=0.05;
-    }
-    if(keys[SDL_SCANCODE_E])
-    {
-        p1.angle-=0.05;
-    }
-    if (keys[SDL_SCANCODE_W]) // Changed movement so that its dependent on players camera angle basically
-    {
-        p1.y += 3*sin(p1.angle);
-        p1.x+= 3*cos(p1.angle);
-        int newPlayerRow = (p1.y - 10) / 75;  // check top edge
-        int newPlayerCol = p1.x / 100;
-        if (map[newPlayerRow][newPlayerCol] == 1)
-        {
-            p1.y = oldPlayerY;  // restore if wall
-            p1.x = oldPlayerX;
-        }
-    }
-    if (keys[SDL_SCANCODE_S])
-    {
-        p1.y -= 3*sin(p1.angle);
-        p1.x-= 3*cos(p1.angle);
+    float oldPlayerX = p1.x;
+    float oldPlayerY = p1.y;
+    movePlayer(&p1,map);
 
-        int newPlayerRow = (p1.y + 10) / 75;  // check bottom edge
-        int newPlayerCol = p1.x / 100;
-    
-        if (map[newPlayerRow][newPlayerCol] == 1)
-        {
-            p1.y = oldPlayerY;
-            p1.x = oldPlayerX;
-        }
-    }
-    if (keys[SDL_SCANCODE_A])
-    {
-        p1.x += 3*sin(p1.angle);
-        p1.y -=3*cos(p1.angle);
-        int newPlayerRow = p1.y / 75;
-        int newPlayerCol = (p1.x -10) / 100;  // check left edge
-        if (map[newPlayerRow][newPlayerCol] == 1)
-        {
-            p1.x = oldPlayerX;
-            p1.y = oldPlayerY;
-        }
-
-    }
-    if (keys[SDL_SCANCODE_D])
-    {
-        p1.x -= 3*sin(p1.angle);
-        p1.y += 3*cos(p1.angle);
-        int newPlayerRow = p1.y / 75;
-        int newPlayerCol = (p1.x + 10) / 100;  // check right edge
-        if (map[newPlayerRow][newPlayerCol] == 1)
-        {
-            p1.x = oldPlayerX;
-            p1.y= oldPlayerY;
-        }
-    }
-
-    int newPlayerRow = (p1.y+10)/75;
-    int newPlayerCol = (p1.x+10)/100;
+    int newPlayerRow = (p1.y)/75;
+    int newPlayerCol = (p1.x)/100;
 
     if(newPlayerRow >=0 && newPlayerRow < 8 && newPlayerCol >=0 && newPlayerCol < 8)
     {
@@ -311,12 +253,12 @@ bool load_media(Game* game)
 }   
 
 float castRay(player* player,int map[8][8])
-    {
-        float lineX = cos(player->angle);
-        float lineY = sin(player->angle);
-        int playerCol = player->x / 100;
-        int playerRow = player->y / 75;
-        float deltaDirX = fabs(1/lineX);
+{
+        float lineX = cos(player->angle); // This the amount of pixels the ray moves in X for every one unit of ray travel
+        float lineY = sin(player->angle); // This gets direction of Players Y 
+        int playerCol = (player->x+5) / 100; // This show current Column of player 
+        int playerRow = (player->y+5) / 75; // This shows current Row of Player
+        float deltaDirX = fabs(1/lineX); // How far the ray travels to cross one pixel
         float deltaDirY = fabs(1/lineY);
         int stepX;
         int stepY;
@@ -352,7 +294,7 @@ float castRay(player* player,int map[8][8])
             if(sideDistanceX < sideDistanceY)
             {
                 playerCol+=stepX;
-                sideDistanceX += deltaDirX;
+                sideDistanceX += deltaDirX*100;
                 side = 0;
                 if(map[playerRow][playerCol] ==1) 
                 {
@@ -362,7 +304,7 @@ float castRay(player* player,int map[8][8])
             else
             {
                 playerRow+=stepY;
-                sideDistanceY += deltaDirY;
+                sideDistanceY += deltaDirY*75;
                 side = 1;
                 if(map[playerRow][playerCol] ==1) 
                 {
@@ -397,8 +339,6 @@ float castRay(player* player,int map[8][8])
             
         }
         float playerWallDist = sqrt((wallX - player->x)*(wallX - player->x) + (wallY-player->y)*(wallY-player->y));
-        printf("side=%d lineX=%.2f lineY=%.2f playerCol=%d playerRow=%d wallX=%.2f wallY=%.2f dist=%.2f\n",
-    side, lineX, lineY, playerCol, playerRow, wallX, wallY, playerWallDist);
         return playerWallDist;
 
 }
@@ -423,6 +363,65 @@ void drawPlayer(player *player, SDL_Renderer * renderer, int map[8][8])
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
     SDL_RenderDrawLine(renderer,startX,startY,endX,endY);
 }
+
+void movePlayer(player* player, int map[8][8])
+{
+    float oldX = player->x;
+    float oldY = player->y; 
+    const Uint8* keys = SDL_GetKeyboardState(NULL);
+
+    if(keys[SDL_SCANCODE_W])
+    {
+        player->x += 3 * cos(player->angle);
+        player->y += 3 * sin(player->angle);
+    }
+    if(keys[SDL_SCANCODE_S])
+    {
+        player->x -= 3 * cos(player->angle);
+        player->y -= 3 * sin(player->angle);
+    }
+    if(keys[SDL_SCANCODE_A])
+    {
+        player->x += 3 * sin(player->angle);
+        player->y -= 3 * cos(player->angle);
+    }
+    if(keys[SDL_SCANCODE_D])
+    {
+        player->x -= 3 * sin(player->angle);
+        player->y += 3 * cos(player->angle);
+    }
+    if(keys[SDL_SCANCODE_Q])
+    {
+        player->angle+=0.05
+    }
+    if(keys[SDL_SCANCODE_E])
+    {
+        player->angle-=0.05
+    }
+
+
+    if(isColliding(player, map))
+    {
+        player->x = oldX;
+        player->y = oldY;
+    }
+}
+
+bool isColliding(player* player, int map[8][8])
+{
+    int topRow = player->y/75;
+    int botRow = (player->y+10) / 75;
+    int leftCol = player->x / 100;
+    int rightCol = (player->x+10) / 100;
+
+    if(map[topRow][leftCol] == 1 || map[topRow][rightCol] ==1  || map[botRow][leftCol] ==1  || map[botRow][rightCol] ==1) 
+    {
+        return true;
+    }
+    return false;
+}
+
+
 
 
   
