@@ -9,8 +9,15 @@
 #include <math.h>
 #define _USE_MATH_DEFINES
 #define WINDOW_TITLE "02 Close Window"
-#define SCREEN_WIDTH 800 
+#define SCREEN_WIDTH 1600 
 #define SCREEN_HEIGHT 600 
+#define PLAYER_SIZE 10
+#define CELL_WIDTH 100 
+#define CELL_HEIGHT 75
+#define DRAW_CELL_WIDTH 50 
+#define DRAW_CELL_HEIGHT 37.5
+#define MAP_HEIGHT 8 
+#define MAP_WIDTH 8 
 #define IMAGE_FLAGS IMG_INIT_PNG // This represents the bit pattern of a PNG
 #define TEXT_SIZE 80 // PT size not pixel size
 struct game_header 
@@ -39,10 +46,11 @@ typedef struct game_header Game;
 void game_free(Game* game, int exit_status); // Returns the exits status when quiting 
 bool load_media(Game* game);
 bool sdl_initialize(Game* game); // Initalizes Game Pointer
-float castRay(player* player, int map[8][8]);
+float castRay(player* player, int map[8][8], float angle);
 void drawPlayer(player *player, SDL_Renderer * renderer, int map[8][8]); 
 bool isColliding(player* player, int map[8][8]);
 void movePlayer(player* player, int map[8][8]);
+void renderView(player* player, SDL_Renderer* renderer, int map[8][8]);
 
 
 
@@ -116,8 +124,8 @@ int main(int argc, char *argv[])
     float oldPlayerY = p1.y;
     movePlayer(&p1,map);
 
-    int newPlayerRow = (p1.y)/75;
-    int newPlayerCol = (p1.x)/100;
+    int newPlayerRow = (p1.y)/CELL_HEIGHT;
+    int newPlayerCol = (p1.x)/CELL_WIDTH;
 
     if(newPlayerRow >=0 && newPlayerRow < 8 && newPlayerCol >=0 && newPlayerCol < 8)
     {
@@ -129,17 +137,18 @@ int main(int argc, char *argv[])
         }
     }
 
+    SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
+    SDL_RenderClear(game.renderer);
 
-
-    for(int i = 0; i < 8;i++)
+    for(int i = 0; i < MAP_HEIGHT;i++)
     {
-        for(int j = 0; j < 8;j++)
+        for(int j = 0; j < MAP_WIDTH;j++)
         {
             SDL_Rect temp;
-            temp.x = j*100;
-            temp.y = i*75;
-            temp.w = 100;
-            temp.h = 75;
+            temp.x = j*CELL_WIDTH;
+            temp.y = i*CELL_HEIGHT;
+            temp.w = CELL_WIDTH;
+            temp.h = CELL_HEIGHT;
             SDL_RenderDrawRect(game.renderer,&temp);
             if(map[i][j] ==1)
             {
@@ -158,6 +167,7 @@ int main(int argc, char *argv[])
 
     }
         drawPlayer(&p1,game.renderer,map);
+        renderView(&p1, game.renderer,map);
         SDL_RenderPresent(game.renderer);
         SDL_Delay(16);
     }   
@@ -252,12 +262,12 @@ bool load_media(Game* game)
     return false;
 }   
 
-float castRay(player* player,int map[8][8])
+float castRay(player* player,int map[8][8],float angle)
 {
-        float lineX = cos(player->angle); // This the amount of pixels the ray moves in X for every one unit of ray travel
-        float lineY = sin(player->angle); // This gets direction of Players Y 
-        int playerCol = (player->x+5) / 100; // This show current Column of player 
-        int playerRow = (player->y+5) / 75; // This shows current Row of Player
+        float lineX = cos(angle); // This the amount of pixels the ray moves in X for every one unit of ray travel
+        float lineY = sin(angle); // This gets direction of Players Y 
+        int playerCol = (player->x+5) / CELL_WIDTH; // This show current Column of player 
+        int playerRow = (player->y+5) / CELL_HEIGHT; // This shows current Row of Player
         float deltaDirX = fabs(1/lineX); // How far the ray travels to cross one pixel
         float deltaDirY = fabs(1/lineY);
         int stepX;
@@ -268,24 +278,24 @@ float castRay(player* player,int map[8][8])
         if(lineX > 0)
         {
             stepX=1;  
-            sideDistanceX = deltaDirX *((playerCol + 1) * 100 - player->x);
+            sideDistanceX = deltaDirX *((playerCol + 1) * CELL_WIDTH - (player->x+5));
 
         }
         else
         {
             stepX= -1;
-            sideDistanceX = deltaDirX * (player->x - playerCol * 100); 
+            sideDistanceX = deltaDirX * ((player->x+5) - playerCol * CELL_WIDTH); 
         }
         if(lineY > 0)
         {
             stepY=1; 
-            sideDistanceY = deltaDirY *((playerRow + 1 ) * 75 - player->y);
+            sideDistanceY = deltaDirY *((playerRow + 1 ) * CELL_HEIGHT - (player->y+5));
             
         }
         else
         {
             stepY=-1;
-            sideDistanceY = deltaDirY * (player->y - playerRow * 75);
+            sideDistanceY = deltaDirY * ((player->y+5) - playerRow * CELL_HEIGHT);
         }
     
         bool hit = false;
@@ -294,7 +304,7 @@ float castRay(player* player,int map[8][8])
             if(sideDistanceX < sideDistanceY)
             {
                 playerCol+=stepX;
-                sideDistanceX += deltaDirX*100;
+                sideDistanceX += deltaDirX*CELL_WIDTH;
                 side = 0;
                 if(map[playerRow][playerCol] ==1) 
                 {
@@ -317,28 +327,28 @@ float castRay(player* player,int map[8][8])
         {
             if(lineX > 0 ) 
             {
-                wallX = (playerCol)*100;
+                wallX = (playerCol)*CELL_WIDTH;
             }
             else
             {
-                wallX = (playerCol+1)*100;
+                wallX = (playerCol+1)*CELL_WIDTH;
             }
-             wallY = player->y + ((wallX - player->x) / lineX) * lineY;
+             wallY = (player->y+5) + ((wallX - (player->x+5)) / lineX) * lineY;
         }
         else
         {
             if(lineY > 0 )
             {
-                wallY = playerRow * 75;
+                wallY = playerRow * CELL_HEIGHT;
             }
             else
             {
-                wallY = (playerRow+1)*75;
+                wallY = (playerRow+1)*CELL_HEIGHT;
             }
-            wallX = player->x + ((wallY- player->y) / lineY) * lineX;
+            wallX = (player->x+5) + ((wallY- (player->y+5)) / lineY) * lineX;
             
         }
-        float playerWallDist = sqrt((wallX - player->x)*(wallX - player->x) + (wallY-player->y)*(wallY-player->y));
+        float playerWallDist = sqrt((wallX - (player->x+5))*(wallX - (player->x+5)) + (wallY-(player->y+5))*(wallY-(player->y+5)));
         return playerWallDist;
 
 }
@@ -348,14 +358,14 @@ void drawPlayer(player *player, SDL_Renderer * renderer, int map[8][8])
     SDL_Rect temp;
     temp.x = player->x;
     temp.y = player->y;
-    temp.w =  10;
-    temp.h = 10;
+    temp.w =  PLAYER_SIZE;
+    temp.h = PLAYER_SIZE;
     SDL_RenderDrawRect(renderer, &temp);
     SDL_SetRenderDrawColor(renderer, 144,238,144,0);
     SDL_RenderFillRect(renderer,&temp);
 
     // Draw line 
-    float dist = castRay(player,map);
+    float dist = castRay(player,map, player->angle);
     int startX = temp.x+temp.w/2;
     int startY = temp.h/2 + temp.y;
     int endX = startX + cos(player->angle) * dist;
@@ -392,11 +402,11 @@ void movePlayer(player* player, int map[8][8])
     }
     if(keys[SDL_SCANCODE_Q])
     {
-        player->angle+=0.05
+        player->angle+=0.05;
     }
     if(keys[SDL_SCANCODE_E])
     {
-        player->angle-=0.05
+        player->angle-=0.05;
     }
 
 
@@ -409,16 +419,33 @@ void movePlayer(player* player, int map[8][8])
 
 bool isColliding(player* player, int map[8][8])
 {
-    int topRow = player->y/75;
-    int botRow = (player->y+10) / 75;
-    int leftCol = player->x / 100;
-    int rightCol = (player->x+10) / 100;
+    int topRow = player->y/CELL_HEIGHT;
+    int botRow = (player->y+PLAYER_SIZE) / CELL_HEIGHT;
+    int leftCol = player->x / CELL_WIDTH;
+    int rightCol = (player->x+PLAYER_SIZE) / CELL_WIDTH;
 
     if(map[topRow][leftCol] == 1 || map[topRow][rightCol] ==1  || map[botRow][leftCol] ==1  || map[botRow][rightCol] ==1) 
     {
         return true;
     }
     return false;
+}
+
+void renderView(player* player,  SDL_Renderer* renderer, int map[8][8])
+{
+    float fov = M_PI /3;
+    for(int col = 0; col < SCREEN_WIDTH/2;col++) 
+    {
+        float angleOffset = ((float)col / (SCREEN_WIDTH/2))* fov;
+        float rayAngle = (player->angle - fov/2) + angleOffset;
+        float dist = castRay(player, map,rayAngle);
+        float wallHeight = (SCREEN_HEIGHT*CELL_WIDTH)/dist;
+        float drawStart = (SCREEN_HEIGHT/2) - (wallHeight/2);
+        float drawEnd = (SCREEN_HEIGHT/2) + (wallHeight/2);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderDrawLine(renderer,col+ SCREEN_WIDTH/2,drawStart,col+ SCREEN_WIDTH/2,drawEnd);
+
+    }
 }
 
 
