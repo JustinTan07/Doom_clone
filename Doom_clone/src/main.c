@@ -41,17 +41,25 @@ typedef struct{
     float planeY;
 } player;
 
+typedef struct{
+    float distance;
+    int side;
+    int mapRow;
+    int mapCol;
+} rayHit;
+
+
 typedef struct game_header Game;
 
 void game_free(Game* game, int exit_status); // Returns the exits status when quiting 
 bool load_media(Game* game);
 bool sdl_initialize(Game* game); // Initalizes Game Pointer
-float castRay(player* player, int map[8][8], float angle);
+rayHit castRay(player* player, int map[8][8], float angle);
 void drawPlayer(player *player, SDL_Renderer * renderer, int map[8][8]); 
 bool isColliding(player* player, int map[8][8]);
 void movePlayer(player* player, int map[8][8]);
 void renderView(player* player, SDL_Renderer* renderer, int map[8][8]);
-
+void renderWall(SDL_Renderer* renderer,int col,float drawStart,float drawEnd,rayHit hit,int map[8][8]);
 
 
 
@@ -67,11 +75,11 @@ int main(int argc, char *argv[])
     game.text_image = NULL;
     int map[8][8] = {
     {1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 0, 1, 0, 0, 0, 0, 1},
-    {1, 0, 1, 0, 0, 0, 0, 1},
-    {1, 0, 1, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 1, 0, 1},
+    {1, 0, 1, 0, 0, 2, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 3, 0, 0, 4, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 1},
     {1, 1, 1, 1, 1, 1, 1, 1},
     };
@@ -150,7 +158,7 @@ int main(int argc, char *argv[])
             temp.w = CELL_WIDTH;
             temp.h = CELL_HEIGHT;
             SDL_RenderDrawRect(game.renderer,&temp);
-            if(map[i][j] ==1)
+            if(map[i][j] > 0)
             {
                 SDL_SetRenderDrawColor(game.renderer,0,0,0,0);
                 SDL_RenderFillRect(game.renderer,&temp);
@@ -262,7 +270,7 @@ bool load_media(Game* game)
     return false;
 }   
 
-float castRay(player* player,int map[8][8],float angle)
+rayHit castRay(player* player,int map[8][8],float angle)
 {
         float lineX = cos(angle); // This the amount of pixels the ray moves in X for every one unit of ray travel
         float lineY = sin(angle); // This gets direction of Players Y 
@@ -306,17 +314,17 @@ float castRay(player* player,int map[8][8],float angle)
                 playerCol+=stepX;
                 sideDistanceX += deltaDirX*CELL_WIDTH;
                 side = 0;
-                if(map[playerRow][playerCol] ==1) 
+                if(map[playerRow][playerCol] >0) 
                 {
                     hit = true;
                 }
             }
             else
-            {
+            {   
                 playerRow+=stepY;
                 sideDistanceY += deltaDirY*75;
                 side = 1;
-                if(map[playerRow][playerCol] ==1) 
+                if(map[playerRow][playerCol] >0) 
                 {
                     hit = true;
                 }
@@ -349,7 +357,12 @@ float castRay(player* player,int map[8][8],float angle)
             
         }
         float playerWallDist = sqrt((wallX - (player->x+5))*(wallX - (player->x+5)) + (wallY-(player->y+5))*(wallY-(player->y+5)));
-        return playerWallDist;
+        rayHit result;
+        result.distance = playerWallDist;
+        result.side = side;
+        result.mapRow = playerRow;
+        result.mapCol = playerCol;
+        return result;
 
 }
 
@@ -365,7 +378,8 @@ void drawPlayer(player *player, SDL_Renderer * renderer, int map[8][8])
     SDL_RenderFillRect(renderer,&temp);
 
     // Draw line 
-    float dist = castRay(player,map, player->angle);
+    rayHit currRayHit = castRay(player,map, player->angle);
+    float dist = currRayHit.distance;
     int startX = temp.x+temp.w/2;
     int startY = temp.h/2 + temp.y;
     int endX = startX + cos(player->angle) * dist;
@@ -424,7 +438,7 @@ bool isColliding(player* player, int map[8][8])
     int leftCol = player->x / CELL_WIDTH;
     int rightCol = (player->x+PLAYER_SIZE) / CELL_WIDTH;
 
-    if(map[topRow][leftCol] == 1 || map[topRow][rightCol] ==1  || map[botRow][leftCol] ==1  || map[botRow][rightCol] ==1) 
+    if(map[topRow][leftCol] > 0 || map[topRow][rightCol] > 0  || map[botRow][leftCol] > 0  || map[botRow][rightCol] > 0) 
     {
         return true;
     }
@@ -438,14 +452,51 @@ void renderView(player* player,  SDL_Renderer* renderer, int map[8][8])
     {
         float angleOffset = ((float)col / (SCREEN_WIDTH/2))* fov;
         float rayAngle = (player->angle - fov/2) + angleOffset;
-        float dist = castRay(player, map,rayAngle);
+
+        rayHit temp = castRay(player,map,rayAngle);
+        float dist = temp.distance;
         float wallHeight = (SCREEN_HEIGHT*CELL_WIDTH)/dist;
         float drawStart = (SCREEN_HEIGHT/2) - (wallHeight/2);
         float drawEnd = (SCREEN_HEIGHT/2) + (wallHeight/2);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderDrawLine(renderer,col+ SCREEN_WIDTH/2,drawStart,col+ SCREEN_WIDTH/2,drawEnd);
+        
+        renderWall(renderer,col,drawStart,drawEnd,temp,map);
 
     }
+}
+void renderWall(SDL_Renderer* renderer,int col,float drawStart,float drawEnd,rayHit hit, int map[8][8])
+{
+    int r,g,b;
+    switch(map[hit.mapRow][hit.mapCol])
+    {
+        case 2:
+        {
+            r= 255, g = 0; b = 0;
+            break;
+        }
+        case 3:
+        {
+            r= 0, g = 255; b = 0;
+            break;
+        }
+        case 4:
+        {
+            r= 0, g = 0; b = 255;
+            break;
+        }
+        default:
+        {
+            r= 255, g = 255; b = 255;
+            break;
+        }
+    }
+    if(hit.side == 1)
+    {
+        r/=2;
+        g/=2;
+        b/=2;
+    }
+    SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+    SDL_RenderDrawLine(renderer,col+ SCREEN_WIDTH/2,drawStart,col+ SCREEN_WIDTH/2,drawEnd);
 }
 
 
